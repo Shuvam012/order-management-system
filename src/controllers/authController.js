@@ -78,6 +78,12 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
+    if (user.role === "vendor") {
+  user.isOnline = true;
+  await user.save();
+}
+
+
     if (!email || !password) {
         return res.status(400).json({ message: "Email and password required" });
     }
@@ -97,6 +103,10 @@ const loginUser = async (req, res) => {
 
 
 const logoutUser = async (req, res) => {
+     if (req.user?.role === "vendor") {
+    req.user.isOnline = false;
+    await req.user.save();
+  }
     res.cookie("token", null, {
       httpOnly: true,
       expires: new Date(0),
