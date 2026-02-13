@@ -1,0 +1,14 @@
+
+# Node
+node_modules/
+
+# Environment
+.env
+
+# Frontend
+Frontend/node_modules/
+Frontend/.env
+
+# Backend
+Backend/node_modules/
+Backend/.env
