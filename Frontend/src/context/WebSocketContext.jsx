@@ -1,63 +1,74 @@
-// // src/context/WebSocketContext.jsx
-// import { createContext, useContext, useEffect, useState } from "react";
-
-// const WebSocketContext = createContext();
-
-// export const WebSocketProvider = ({ children }) => {
-//   const [ws, setWs] = useState(null);
-
-//   useEffect(() => {
-//     const socket = new WebSocket("ws://localhost:5000");
-//     setWs(socket);
-
-//     socket.onopen = () => console.log("Connected to WebSocket server");
-//     socket.onclose = () => console.log("WebSocket disconnected");
-
-//     return () => socket.close();
-//   }, []);
-
-//   return (
-//     <WebSocketContext.Provider value={{ ws }}>
-//       {children}
-//     </WebSocketContext.Provider>
-//   );
-// };
-
-// export const useWebSocket = () => useContext(WebSocketContext);
 
 
-// src/context/WebSocketContext.jsx
-import { createContext, useContext, useEffect, useState } from "react";
+
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 
 const WebSocketContext = createContext();
 
+const WS_URL = "ws://localhost:5000";
+const RECONNECT_DELAY = 3000;
+
 export const WebSocketProvider = ({ children }) => {
-  const [ws, setWs] = useState(null);
-  const [messages, setMessages] = useState([]); // store all real-time messages
+  const [lastMessage, setLastMessage] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const wsRef = useRef(null);
+  const reconnectTimer = useRef(null);
+  const shouldReconnect = useRef(true); // prevent reconnect on intentional unmount
 
-  useEffect(() => {
-    const socket = new WebSocket("ws://localhost:5000");
-    setWs(socket);
+  const connect = useCallback(() => {
+    // cleanup any existing socket before making a new one
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
 
-    socket.onopen = () => console.log("Connected to WebSocket server");
-    socket.onclose = () => console.log("WebSocket disconnected");
-    socket.onerror = (err) => console.error("WebSocket error:", err);
+    const socket = new WebSocket(WS_URL);
+    wsRef.current = socket;
 
-    // Listen for all messages from backend
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+      setIsConnected(true);
+      clearTimeout(reconnectTimer.current); // cancel any pending reconnect
+    };
+
     socket.onmessage = (event) => {
       try {
-        const data = JSON.parse(event.data);
-        setMessages((prev) => [...prev, data]); // append new messages
-      } catch (err) {
-        console.error("Failed to parse WS message:", err);
+        setLastMessage(JSON.parse(event.data));
+      } catch {
+        console.error("Invalid WS payload:", event.data);
       }
     };
 
-    return () => socket.close();
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+      setIsConnected(false);
+
+      // auto-reconnect unless component is unmounting
+      if (shouldReconnect.current) {
+        console.log(`Reconnecting in ${RECONNECT_DELAY / 1000}s...`);
+        reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY);
+      }
+    };
+
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+      socket.close(); // triggers onclose → reconnect
+    };
   }, []);
 
+  useEffect(() => {
+    shouldReconnect.current = true;
+    connect();
+
+    // cleanup on unmount
+    return () => {
+      shouldReconnect.current = false;
+      clearTimeout(reconnectTimer.current);
+      wsRef.current?.close();
+    };
+  }, [connect]);
+
   return (
-    <WebSocketContext.Provider value={{ ws, messages }}>
+    <WebSocketContext.Provider value={{ lastMessage, isConnected }}>
       {children}
     </WebSocketContext.Provider>
   );

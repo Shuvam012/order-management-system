@@ -1,229 +1,112 @@
-// import React, { useEffect, useState } from "react";
-// import { useWebSocket } from "../../context/WebSocketContext.jsx";
-// import api from "../../api/axios.js";
-
-// const AllOrders = () => {
-//   const [orders, setOrders] = useState([]);
-//   const [filter, setFilter] = useState("");
-//   const { ws } = useWebSocket();
-
-//   useEffect(() => {
-//     const fetchOrders = async () => {
-//       const res = await api.get("/orders");
-//       setOrders(res.data);
-//     };
-//     fetchOrders();
-//   }, []);
-
-//   useEffect(() => {
-//     if (!ws) return;
-//     // ws.onmessage = (e) => {
-//     //   const data = JSON.parse(e.data);
-//     //   if (data.type === "order_update") {
-//     //     setOrders((prev) =>
-//     //       prev.map((o) => (o._id === data.order._id ? data.order : o))
-//     //     );
-//     //   }
-//     // };
-  
-// //     ws.onmessage = (e) => {
-// //   const data = JSON.parse(e.data);
-
-// //   if (data.topic === "vendor/status") {
-// //     // Only one vendor in your case
-// //     setOrders((prev) =>
-// //       prev.map((o) =>
-// //         o.vendor?._id === data.data.vendorId // make sure payload contains vendorId
-// //           ? { ...o, vendor: { ...o.vendor, isOnline: data.data.status === "online" } }
-// //           : o
-// //       )
-// //     );
-// //   }
-
-// //   if (data.topic === "orders/update") {
-// //     setOrders((prev) =>
-// //       prev.map((o) => (o._id === data.data.orderId ? { ...o, status: data.data.status } : o))
-// //     );
-// //   }
-// // };
-
-// ws.onmessage = (e) => {
-//   const data = JSON.parse(e.data);
-
-//   if (data.topic === "vendor/status") {
-//     const { vendorId, status } = data.data;
-//     setOrders((prev) =>
-//       prev.map((o) => {
-//         // If this order belongs to the vendor who just changed status
-//         if (o.vendor && o.vendor._id === vendorId) {
-//           return { 
-//             ...o, 
-//             vendor: { ...o.vendor, isOnline: status === "online" } 
-//           };
-//         }
-//         return o;
-//       })
-//     );
-//   }
-
-// //   if (data.topic === "vendor/status") {
-// //     if (!data.data.vendorId) return; // skip if vendorId missing
-// //     setOrders((prev) =>
-// //         prev.map((o) =>
-// //             o.vendor?._id === data.data.vendorId
-// //                 ? { ...o, vendor: { ...o.vendor, isOnline: data.data.status === "online" } }
-// //                 : o
-// //         )
-// //     );
-// // }
-
-// }
 
 
-  
-  
-//   }, [ws]);
 
-//   const filteredOrders = filter
-//     ? orders.filter((o) => o.status === filter)
-//     : orders;
 
-//   return (
-//     <div className="p-6">
-//       <h2 className="text-2xl font-bold mb-4">All Orders</h2>
-//       <div className="mb-4 space-x-2">
-//         <button onClick={() => setFilter("")}>All</button>
-//         <button onClick={() => setFilter("pending")}>Pending</button>
-//         <button onClick={() => setFilter("accepted")}>Accepted</button>
-//         <button onClick={() => setFilter("on_the_way")}>On The Way</button>
-
-//         <button onClick={() => setFilter("in_progress")}>In Progress</button>
-//         <button onClick={() => setFilter("completed")}>Completed</button>
-//       </div>
-//       {filteredOrders.map((order) => (
-//         <div key={order._id} className="border p-4 mb-3 rounded shadow">
-//           <p>Order ID: {order._id}</p>
-//           <p>Status: {order.status}</p>
-//           {/* <p>Vendor: {order.vendor?.name || "Unassigned"}</p> */}
-//           <p>
-//   Vendor: {order.vendor?.name || "Unassigned"}{" "}
-//   {order.vendor && (
-//     <span className={`ml-2 font-bold ${order.vendor.isOnline ? "text-green-600" : "text-red-600"}`}>
-//       ({order.vendor.isOnline ? "Online" : "Offline"})
-//     </span>
-//   )}
-// </p>
-
-//         </div>
-//       ))}
-//     </div>
-//   );
-// };
-
-// export default AllOrders;
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useWebSocket } from "../../context/WebSocketContext.jsx";
 import api from "../../api/axios.js";
 
 const AllOrders = () => {
-  const { messages } = useWebSocket();
+  const { lastMessage } = useWebSocket();
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("");
+  const ordersLoaded = useRef(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
-      const res = await api.get("/orders");
-      setOrders(res.data);
+      try {
+        const res = await api.get("/orders");
+        setOrders(res.data);
+        ordersLoaded.current = true;
+      } catch (err) { console.error(err); }
     };
     fetchOrders();
   }, []);
 
-  // useEffect(() => {
-  //   messages.forEach((data) => {
-  //     if (data.topic === "vendor/status") {
-  //       const { vendorId, status } = data.data;
-  //       setOrders((prev) =>
-  //         prev.map((o) =>
-  //           o.vendor && o.vendor._id === vendorId
-  //             ? { ...o, vendor: { ...o.vendor, isOnline: status === "online" } }
-  //             : o
-  //         )
-  //       );
-  //     }
+  useEffect(() => {
+    if (!lastMessage || !ordersLoaded.current) return;
+    const { topic, data } = lastMessage;
 
-  //     if (data.topic === "orders/update") {
-  //       setOrders((prev) =>
-  //         prev.map((o) => (o._id === data.data.orderId ? { ...o, status: data.data.status } : o))
-  //       );
-  //     }
-
-  //     if (data.topic === "orders/update") {
-  //       setOrders((prev) => [data.data, ...prev]);
-  //     }
-  //   });
-  // }, [messages]);
-
-useEffect(() => {
-  messages.forEach((data) => {
-    if (data.topic === "orders/update") {
-      setOrders((prev) =>
-        prev.map((o) =>
-          o._id === data.data.orderId
-            ? { ...o, status: data.data.status, vendor: data.data.vendor }
-            : o
-        )
-      );
+    if (topic === "orders/new") {
+      setOrders(prev => (prev.find(o => o._id === data._id) ? prev : [data, ...prev]));
     }
-
-    if (data.topic === "orders/new") {
-      setOrders((prev) => [data.data, ...prev]);
+    if (topic === "orders/update") {
+      setOrders(prev => prev.map(o => (o._id === data._id ? data : o)));
     }
-
-    if (data.topic === "vendor/status") {
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.vendor?._id === data.data.vendorId
-            ? { ...o, vendor: { ...o.vendor, isOnline: data.data.status === "online" } }
-            : o
-        )
-      );
+    if (topic === "vendor/status") {
+      setOrders(prev => prev.map(o => 
+        o.vendor?._id === data.vendorId 
+          ? { ...o, vendor: { ...o.vendor, isOnline: data.isOnline } } 
+          : o
+      ));
     }
-  });
-}, [messages]);
+  }, [lastMessage]);
 
-
-  const filteredOrders = filter
-    ? orders.filter((o) => o.status === filter)
-    : orders;
+  const filteredOrders = filter ? orders.filter(o => o.status === filter) : orders;
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">All Orders</h2>
-      <div className="mb-4 space-x-2">
-        {["All", "pending", "accepted", "on_the_way", "in_progress", "completed"].map((f) => (
-          <button key={f} onClick={() => setFilter(f === "All" ? "" : f)}>
-            {f}
+    <div className="max-w-5xl mx-auto p-8 font-sans antialiased text-slate-900">
+      <div className="flex justify-between items-baseline mb-8">
+        <h1 className="text-xl font-semibold tracking-tight">Order Log</h1>
+        <span className="text-xs font-mono text-slate-400">{orders.length} TOTAL</span>
+      </div>
+
+      {/* Minimal Filter Bar */}
+      <div className="flex gap-6 border-b border-slate-100 mb-6 text-sm">
+        {["All", "pending", "accepted", "in_progress", "on_the_way", "completed"].map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f === "All" ? "" : f)}
+            className={`pb-3 transition-colors capitalize ${
+              (filter === f || (f === "All" && filter === ""))
+                ? "border-b-2 border-blue-500 text-blue-600 font-medium"
+                : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            {f.replace("_", " ")}
           </button>
         ))}
       </div>
-      {filteredOrders.map((order) => (
-        <div key={order._id} className="border p-4 mb-3 rounded shadow">
-          <p>Order ID: {order._id}</p>
-          <p>Status: {order.status}</p>
-          <p>
-            Vendor: {order.vendor?.name || "Unassigned"}{" "}
-            {order.vendor && (
-              <span className={`ml-2 font-bold ${order.vendor.isOnline ? "text-green-600" : "text-red-600"}`}>
-                ({order.vendor.isOnline ? "Online" : "Offline"})
+
+      {/* Minimalist List */}
+      <div className="space-y-1">
+        {filteredOrders.map((order) => (
+          <div 
+            key={order._id} 
+            className="group flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-2 h-2 rounded-full bg-slate-200 group-hover:bg-blue-400 transition-colors" />
+              <div>
+                <p className="text-sm font-mono text-slate-500">#{order._id.slice(-6)}</p>
+              </div>
+            </div>
+
+            <div className="flex-1 px-12">
+               <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{order.vendor?.name || "Unassigned"}</span>
+                  {order.vendor && (
+                    <span className={`w-1.5 h-1.5 rounded-full ${order.vendor.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
+                  )}
+               </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
+                order.status === 'completed' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'
+              }`}>
+                {order.status.replace("_", " ")}
               </span>
-            )}
-          </p>
-        </div>
-      ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {filteredOrders.length === 0 && (
+        <p className="text-center py-20 text-sm text-slate-400 italic">No orders in this category.</p>
+      )}
     </div>
   );
 };
 
 export default AllOrders;
-

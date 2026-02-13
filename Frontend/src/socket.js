@@ -1,7 +1,7 @@
 const socket = new WebSocket("ws://localhost:5000");
 
 socket.onopen = () => {
-  console.log("WebSocket connected");
+  console.log("WebSocket connected here ");
 };
 
 socket.onmessage = (event) => {

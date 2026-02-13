@@ -11,13 +11,12 @@ import Navbar from "./components/Navbar.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import CreateOrder from "./pages/Customer/CreateOrder.jsx";
-// import VendorDashboard from "./pages/Vendor/VendorDashboard.jsx";
-// import AdminDashboard from "./pages/Admin/AdminDashboard.jsx";
+
 import VendorOrders from "./pages/Vendor/VendorOrders.jsx";
 import AllOrders from "./pages/Admin/AllOrders.jsx";
 
 
-// import ProtectedRoute from "./components/ProtectedRoute.jsx";
+
 import ProtectedRoute from "./utils/ProtectedRoute.jsx";
 
 const App = () => {

@@ -1,155 +1,66 @@
 
+import { updateOrderStatusService,
+  getAllOrdersService,
+  getVendorOrdersService,
+  createOrderService
+ } from "../services/orderService.js";
 
 
-
-
-
-import Order from "../models/Order.js";
-import { publishEvent } from "../mqtt/mqttClient.js";
-import MQTT_TOPICS from "../mqtt/topics.js";
-
-// create
-const createOrder = async (req, res) => {
+ const createOrder = async (req, res) => {
   try {
-    const { items, totalAmount } = req.body;
-
-    if (!items || items.length === 0) {
-      return res.status(400).json({ message: "Order items required" });
-    }
-
-    const order = await Order.create({
-      customer: req.user._id,
-      items,
-      totalAmount,
-      status: "pending",
-    });
-
-   
-    // publishEvent(MQTT_TOPICS.ORDER_NEW, order);
-     publishEvent(MQTT_TOPICS.ORDER_NEW, {
-      topic:"orders/new",
-      data:{
-          orderId: order._id,
-      status: order.status,
-      customer: order.customer,
-      }
-    
+    const order = await createOrderService({
+      customerId: req.user._id,
+      items: req.body.items,
+      totalAmount: req.body.totalAmount,
     });
 
     res.status(201).json(order);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    if (err.message === "Order items required") {
+      return res.status(400).json({ message: err.message });
+    }
+    res.status(500).json({ message: err.message });
   }
 };
 
-// create order
-// const createOrder = async (req, res) => {
-//   const { items, totalAmount } = req.body;
-//   if (!items || items.length === 0) return res.status(400).json({ message: "Items required" });
-
-//   const order = await Order.create({ customer: req.user._id, items, totalAmount, status: "pending" });
-
-//   client.publish(MQTT_TOPICS.ORDER_NEW, JSON.stringify({ orderId: order._id, status: order.status, customer: order.customer }), { qos: 1 });
-
-//   res.status(201).json(order);
-// };
-
-// update order
-// const updateOrderStatus = async (req, res) => {
-//   const { status } = req.body;
-//   const allowed = ["accepted", "on_the_way", "in_progress", "completed", "rejected"];
-//   if (!allowed.includes(status)) return res.status(400).json({ message: "Invalid status" });
-
-//   const order = await Order.findById(req.params.id);
-//   if (!order) return res.status(404).json({ message: "Order not found" });
-
-//   if (!order.vendor) order.vendor = req.user._id;
-//   order.status = status;
-//   await order.save();
-
-//   client.publish(MQTT_TOPICS.ORDER_UPDATE, JSON.stringify({ orderId: order._id, status: order.status, vendor: order.vendor }), { qos: 1 });
-
-//   res.json(order);
-// };
-
-
-
-// update
-const updateOrderStatus = async (req, res) => {
+ const updateOrderStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-
-    const allowedStatus = [
-      "accepted",
-      "on_the_way",
-      "in_progress",
-      "completed",
-    ];
-
-    if (!allowedStatus.includes(status)) {
-      return res.status(400).json({ message: "Invalid status" });
-    }
-
-    const order = await Order.findById(req.params.id);
-
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
-
-    // assign vendor
-    if (!order.vendor) {
-      order.vendor = req.user._id;
-    }
-
-    order.status = status;
-    await order.save();
-
-    
-    // publishEvent(MQTT_TOPICS.ORDER_UPDATE, {
-
-    //   orderId: order._id,
-    //   status: order.status,
-    //   vendor: order.vendor,
-    // });
-    
-    publishEvent(MQTT_TOPICS.ORDER_UPDATE, {
-      topic: "orders/update",
-      data: {
-        orderId: order._id,
-        status: order.status,
-        vendor: order.vendor,
-      },
+    const updatedOrder = await updateOrderStatusService({
+      orderId: req.params.id,
+      status: req.body.status,
+      userId: req.user._id,
     });
 
-    res.json(order);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.json(updatedOrder);
+  } catch (err) {
+    if (err.message === "Invalid status")
+      return res.status(400).json({ message: err.message });
+
+    if (err.message === "Order not found")
+      return res.status(404).json({ message: err.message });
+
+    res.status(500).json({ message: err.message });
   }
 };
 
-// all orders - admin
-const getAllOrders = async (req, res) => {
+/* ---------- Admin: Get All Orders ---------- */
+ const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find()
-      .populate("customer", "name email")
-      .populate("vendor", "name isOnline");
-
+    const orders = await getAllOrdersService();
     res.json(orders);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-
-// all orderss - vender
-// const getVendorOrders = async (req, res) => {
-//   const orders = await Order.find({ vendor: req.user._id });
-//   res.json(orders);
-// };
+/* ---------- Vendor: Get Orders ---------- */
 const getVendorOrders = async (req, res) => {
-  const orders = await Order.find({ $or: [{ vendor: req.user._id }, { vendor: null }] });
-  res.json(orders);
+  try {
+    const orders = await getVendorOrdersService(req.user._id);
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
 
-
-export { createOrder, updateOrderStatus, getAllOrders  , getVendorOrders};
+export { updateOrderStatus, getAllOrders, getVendorOrders , createOrder};
