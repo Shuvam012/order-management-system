@@ -3,14 +3,14 @@ import User from "../models/User.js";
 import { client } from "../mqtt/mqttClient.js";
 import MQTT_TOPICS from "../mqtt/topics.js";
 
-/* ---------- helpers ---------- */
+
 const generateToken = (id, role) => {
     return jwt.sign({ id, role }, process.env.JWT_SECRET, {
         expiresIn: "1d",
     });
 };
 
-/* ---------- services ---------- */
+
  const registerUserService = async ({ name, email, password }) => {
     const exists = await User.findOne({ email });
     if (exists) throw new Error("User already exists");
@@ -25,7 +25,8 @@ const generateToken = (id, role) => {
     return user;
 };
 
- const loginUserService = async ({ email, password }) => {
+
+const loginUserService = async ({ email, password }) => {
     const user = await User.findOne({ email });
     if (!user || !(await user.matchPassword(password))) {
         throw new Error("Invalid credentials");
@@ -36,7 +37,8 @@ const generateToken = (id, role) => {
         user.isOnline = true;
         await user.save();
 
-        setImmediate(() => {
+        // Publish MQTT message
+        await new Promise((resolve, reject) => {
             if (client.connected) {
                 client.publish(
                     MQTT_TOPICS.VENDOR_STATUS,
@@ -44,8 +46,12 @@ const generateToken = (id, role) => {
                         vendorId: user._id.toString(),
                         status: "online",
                     }),
-                    { qos: 1 }
+                    { qos: 1 },
+                    (err) => (err ? reject(err) : resolve())
                 );
+            } else {
+                console.warn("MQTT client not connected, skipping status publish");
+                resolve(); // Don't block login if MQTT is down
             }
         });
     }
@@ -54,8 +60,14 @@ const generateToken = (id, role) => {
     return { user, token };
 };
 
- const logoutUserService = async (user) => {
+
+const logoutUserService = async (user) => {
     if (user?.role === "vendor") {
+        // Update database first
+        user.isOnline = false;
+        await user.save();
+
+        // Then publish MQTT message
         await new Promise((resolve, reject) => {
             client.publish(
                 MQTT_TOPICS.VENDOR_STATUS,
@@ -69,7 +81,6 @@ const generateToken = (id, role) => {
         });
     }
 };
-
  const getMeService = async (token) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id).select("-password");

@@ -33,10 +33,11 @@ const AllOrders = () => {
     if (topic === "orders/update") {
       setOrders(prev => prev.map(o => (o._id === data._id ? data : o)));
     }
+
     if (topic === "vendor/status") {
-      setOrders(prev => prev.map(o => 
-        o.vendor?._id === data.vendorId 
-          ? { ...o, vendor: { ...o.vendor, isOnline: data.isOnline } } 
+      setOrders(prev => prev.map(o =>
+        o.vendor?._id === data.vendorId
+          ? { ...o, vendor: { ...o.vendor, isOnline: data.status === "online" } }
           : o
       ));
     }
@@ -57,11 +58,10 @@ const AllOrders = () => {
           <button
             key={f}
             onClick={() => setFilter(f === "All" ? "" : f)}
-            className={`pb-3 transition-colors capitalize ${
-              (filter === f || (f === "All" && filter === ""))
+            className={`pb-3 transition-colors capitalize ${(filter === f || (f === "All" && filter === ""))
                 ? "border-b-2 border-blue-500 text-blue-600 font-medium"
                 : "text-slate-400 hover:text-slate-600"
-            }`}
+              }`}
           >
             {f.replace("_", " ")}
           </button>
@@ -71,8 +71,8 @@ const AllOrders = () => {
       {/* Minimalist List */}
       <div className="space-y-1">
         {filteredOrders.map((order) => (
-          <div 
-            key={order._id} 
+          <div
+            key={order._id}
             className="group flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
           >
             <div className="flex items-center gap-4">
@@ -83,18 +83,17 @@ const AllOrders = () => {
             </div>
 
             <div className="flex-1 px-12">
-               <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{order.vendor?.name || "Unassigned"}</span>
-                  {order.vendor && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${order.vendor.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
-                  )}
-               </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{order.vendor?.name || "Unassigned"}</span>
+                {order.vendor && (
+                  <span className={`w-1.5 h-1.5 rounded-full ${order.vendor.isOnline ? "bg-emerald-500" : "bg-slate-300"}`} />
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${
-                order.status === 'completed' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'
-              }`}>
+              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${order.status === 'completed' ? 'text-emerald-600 bg-emerald-50' : 'text-slate-500 bg-slate-100'
+                }`}>
                 {order.status.replace("_", " ")}
               </span>
             </div>

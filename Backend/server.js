@@ -10,7 +10,7 @@ import authRoutes from './src/routes/authRoutes.js';
 import orderRoutes from './src/routes/orderRoutes.js';
 import http from 'http';
 import { initWebSocket } from './src/websocket/soketServer.js';
-import handleVendorStatus from './src/mqtt/venderStatusHandler.js';
+// import handleVendorStatus from './src/mqtt/venderStatusHandler.js';
 
 
 dotenv.config();
@@ -18,9 +18,9 @@ dotenv.config();
 
 
 const app = express();
-// app.use(cors());
+
 app.use(cors({
-  origin: 'http://localhost:5173', // Replace with your exact Frontend URL
+  origin: 'http://localhost:5173', 
   credentials: true
 }));
 
@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
 initWebSocket(server);
-handleVendorStatus();
+// handleVendorStatus();
 
 // Connect to MongoDB
 connectDB();
@@ -53,8 +53,7 @@ app.use('/api/orders', orderRoutes);
 
 
 
-// const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
 server.listen(PORT, () =>
   console.log(`Server running on port ${PORT}`)

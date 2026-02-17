@@ -42,9 +42,12 @@ const initWebSocket = (server) => {
   client.on("message", (topic, message) => {
     try {
       const payload = JSON.parse(message.toString());
+      console.log(`MQTT message on topic ${topic}:`, payload);
       wss.clients.forEach((wsClient) => {
+        
         if (wsClient.readyState === 1) {
           wsClient.send(JSON.stringify({ topic, data: payload }));
+          console.log(`Sent to WebSocket client:`, { topic, data: payload })
         }
       });
     } catch (err) {
